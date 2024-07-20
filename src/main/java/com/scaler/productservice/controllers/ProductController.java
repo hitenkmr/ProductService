@@ -4,7 +4,7 @@ import com.scaler.productservice.controlleradvice.GlobalExceptionHandler;
 import com.scaler.productservice.exceptions.ProductNotFoundException;
 import com.scaler.productservice.models.Product;
 import com.scaler.productservice.services.ProductService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,10 +14,14 @@ import java.util.List;
 @RestController
 @RequestMapping("products")
 public class ProductController {
-    @Autowired
     ProductService productService;
-    @Autowired
     GlobalExceptionHandler globalExceptionHandler;
+
+    public ProductController(@Qualifier("CustomProductService") ProductService productService,
+                             GlobalExceptionHandler globalExceptionHandler) {
+        this.productService = productService;
+        this.globalExceptionHandler = globalExceptionHandler;
+    }
 
     @GetMapping("/{id}")
     public ResponseEntity<Product> getProductById(@PathVariable("id") long id) throws ProductNotFoundException {
@@ -51,17 +55,35 @@ public class ProductController {
     }
 
     @PatchMapping("/{id}")
-    Product updateProduct(@PathVariable("id") long id, @RequestBody Product product) {
+    Product updateProduct(@PathVariable("id") long id, @RequestBody Product product) throws ProductNotFoundException{
         return productService.updateProduct(id, product);
     }
 
     @PutMapping("/{id}")
-    public Product replaceProduct(@PathVariable("id") Long id, @RequestBody Product product) {
+    public Product replaceProduct(@PathVariable("id") Long id, @RequestBody Product product) throws ProductNotFoundException{
         return productService.replaceProduct(id, product);
     }
 
     @DeleteMapping("/{id}")
-    public Product deleteProduct(@PathVariable("id") Long id) {
-        return productService.deleteProduct(id);
+    public ResponseEntity<String> deleteProduct(@PathVariable("id") Long id) throws ProductNotFoundException {
+        ResponseEntity<String> response;
+        try {
+            productService.deleteProduct(id);
+            response = new ResponseEntity<>(
+                    "Product deleted",
+                    HttpStatus.OK
+            );
+        } catch (ProductNotFoundException e) {
+            response = new ResponseEntity<>(
+                    "Product not found or already has been deleted",
+                    HttpStatus.OK
+            );
+        }
+        return response;
+    }
+
+    @PostMapping
+    public Product addNewProduct(@RequestBody Product product) {
+        return  productService.addNewProduct(product);
     }
 }
